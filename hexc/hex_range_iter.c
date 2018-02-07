@@ -1,14 +1,11 @@
 #include "hexc.h"
-#include <stdio.h>
-#define GETINT(x,y) PyLong_AsLong(PyObject_GetAttr(x, Py_BuildValue("s", y)))
-#define TOLONG(x) PyLong_AsLong(x)
 
 // Define class boilerplate functions
 static PyObject *hex_range_iter_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
 	hexrangeiter_t *self;
 
-	self = (hexrangeiter_t *)type->tp_alloc(type, 0);
+	self = (hexrangeiter_t *)(type->tp_alloc(type, 0));
 	if (self != NULL) {
 		self->pos = 0;
 		self->dir = 0;
@@ -23,71 +20,64 @@ static PyObject *hex_range_iter_new(PyTypeObject *type, PyObject *args, PyObject
 
 static void hex_range_iter_dealloc(hexrangeiter_t *self)
 {
-    // Py_XDECREF(self->center);
-    // Py_XDECREF(self->hex);
-	Py_TYPE(self)->tp_free((PyObject*)self);
-    puts("Here");
+    Py_DECREF(self->hex);  // decref our stored hex
+    Py_DECREF(self->center); // and our center point
+	Py_TYPE(self)->tp_free((PyObject*)self); // SIGSEGV here
     
 }
 
 static int hex_range_iter_init(hexrangeiter_t *self, PyObject *args, PyObject *kwds)
 {
-	static char *kwlist[] = {"center", "radius", NULL};
+    // Takes 2 args, the center of the ring as an AbstractHex, and the radius as an int
+    static char *kwlist[] = {"center", "radius", NULL};
 	if (! PyArg_ParseTupleAndKeywords(args, kwds, "Oi", kwlist, &self->center, &self->radius))
 		return -1;
 
-	PyObject *radius = Py_BuildValue("i", 1);
+    Py_INCREF(self->center); //increc\f here because Py_Arg_Parse... returns borrowed references
+	PyObject *radius = PyLong_FromLong(1L);
     PyObject *direction = PyObject_CallMethod(self->center, "direction", "i", 4);
     PyObject *scaled = PyNumber_Multiply(direction, radius);
-	self->hex = PyNumber_Add(self->center, scaled);
-	Py_CLEAR(radius);
-    Py_CLEAR(direction);
-    Py_CLEAR(scaled);
+	self->hex = PyNumber_Add(self->center, scaled); // No incref needed because Py_Number_Add returns a new reference
+	Py_DECREF(radius); // decref all of our temp variables
+    Py_DECREF(direction);
+    Py_DECREF(scaled);
 	return 0;
 }
 
 static PyObject *hex_range_iter_next(hexrangeiter_t *self)
 {
-	/* Returning NULL in this case is enough. The next() builtin will raise the
-	 * StopIteration error for us.
-	*/
-    while (1)
-    {
-        if (self->distance <= self->radius)
-        {    
-            if (self->dir < 6)
-            {
-                if (self->pos < self->radius)
-                {
-                    PyObject *ret = self->hex;
-                    self->hex = PyObject_CallMethod(ret, "neighbor", "i", self->dir);
-                    self->pos++;
-                    return (ret);
-                }
-                else
-                {
-                    self->pos = 0;
-                    self->dir++;
-                    continue;
-                }
-            }
-            self->dir = 0;
-            self->distance++;
-            PyObject *radius = Py_BuildValue("i", self->distance);    
-            PyObject *direction = PyObject_CallMethod(self->center, "direction", "i", 4);
-            PyObject *scaled = PyNumber_Multiply(direction, radius);
-            self->hex = PyNumber_Add(self->center, scaled);
-            Py_CLEAR(radius);
-            Py_CLEAR(direction);
-            Py_CLEAR(scaled);
-            continue;
-        }
-        break;
+
+    self->pos++; // pos is the index along a side of a hexagonal ring
+    if (self->pos >= self->radius)  // its length is equal to the radius of the ring
+    {                               // so check if we've run off the end and if so change direction
+        self->pos = 0;
+        self->dir++;
     }
-    puts("Here");
-    // Py_CLEAR(self->hex);
-    Py_CLEAR(self->center);
-    return NULL;
+    
+    if (self->dir >= 6)             // If we've already done all 6 sides
+    {
+        self->dir = 0;              // reset our direction
+        self->distance++;           // and increase our radius
+
+        if (self->distance >= self->radius) // If we've reached our max radius
+            return NULL;                    // return NULL to exit generator
+                                            // Returning NULL in this case is enough. The next() builtin will raise the
+                                            // StopIteration error for us.
+
+        PyObject *radius = PyLong_FromLong(self->distance); // calculate our new starting position  v
+        PyObject *direction = PyObject_CallMethod(self->center, "direction", "i", 4);
+        PyObject *scaled = PyNumber_Multiply(direction, radius); 
+        Py_DECREF(self->hex); // make sure to decref our unused hex from last call
+        self->hex = PyNumber_Add(self->center, scaled);  // finish calc and save new hex            ^
+        Py_DECREF(radius);  // decref all our temp variables
+        Py_DECREF(direction);
+        Py_DECREF(scaled);
+    }
+
+    PyObject *ret = self->hex; // grab a ref to our return value
+    self->hex = PyObject_CallMethod(ret, "neighbor", "i", self->dir); // store the next hex in our sequence
+       
+    return (ret);
 }
 
 PyTypeObject HexRangeGenType = {
@@ -127,6 +117,6 @@ PyTypeObject HexRangeGenType = {
     0,                              /* tp_descr_set */
     0,                              /* tp_dictoffset */
     (initproc)hex_range_iter_init,                 /* tp_init */
-    PyType_GenericAlloc,            /* tp_alloc */
+    0,            /* tp_alloc */
     hex_range_iter_new,                  /* tp_new */
 };

@@ -102,6 +102,6 @@ PyTypeObject HexRingGenType = {
     0,                              /* tp_descr_set */
     0,                              /* tp_dictoffset */
     (initproc)iter_ring_init,                 /* tp_init */
-    PyType_GenericAlloc,            /* tp_alloc */
+    0,					            /* tp_alloc */
     iter_ring_new,                  /* tp_new */
 };

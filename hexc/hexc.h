@@ -46,10 +46,10 @@ struct hexringiter_s
 struct hexrangeiter_s
 {
 	PyObject_HEAD
-	int pos;
 	int	dir;
-	int distance;
-	int radius;
+	long pos;
+	long distance;
+	long radius;
 	PyObject *hex;
 	PyObject *center;
 };
@@ -58,10 +58,10 @@ struct hexrangeiter_s
 extern PyTypeObject AbstractHexType;
 extern PyTypeObject HexRingGenType;
 extern PyTypeObject HexRangeGenType;
-PyTypeObject HexType;
-PyTypeObject SliceType;
-PyTypeObject StackType;
-PyTypeObject GridType;
+extern PyTypeObject HexType;
+extern PyTypeObject SliceType;
+extern PyTypeObject StackType;
+extern PyTypeObject GridType;
 
 // declare some handy constants
 static int	DIRECTIONS[6][3] = {
