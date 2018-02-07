@@ -102,7 +102,7 @@ static PyObject *abstract_hex_add(PyObject *self, PyObject *Hex2)
 	s = GETINT(self, "s") + GETINT(Hex2, "s");
 
 	PyObject *argList = Py_BuildValue("iii", q, r, s);
-	PyObject *obj = PyObject_CallObject(Py_TYPE(self), argList);
+	PyObject *obj = PyObject_CallObject((PyObject*)self->ob_type, argList);
 	Py_DECREF(argList);
 	
 	return (obj);
@@ -118,7 +118,7 @@ static PyObject *abstract_hex_subtract(PyObject *self, PyObject *Hex2)
 	s = GETINT(self, "s") - GETINT(Hex2, "s");
 
 	PyObject *argList = Py_BuildValue("iii", q, r, s);
-	PyObject *obj = PyObject_CallObject(Py_TYPE(self), argList);
+	PyObject *obj = PyObject_CallObject((PyObject*)self->ob_type, argList);
 	Py_DECREF(argList);
 	return (obj);
 }
@@ -133,7 +133,7 @@ static PyObject *abstract_hex_scale(PyObject *self, PyObject *z)
 	s = GETINT(self, "s") * scale;
 
 	PyObject *argList = Py_BuildValue("iii", q, r, s);
-	PyObject *obj = PyObject_CallObject(Py_TYPE(self), argList);
+	PyObject *obj = PyObject_CallObject((PyObject*)self->ob_type, argList);
 	Py_DECREF(argList);
 	return (obj);
 }
