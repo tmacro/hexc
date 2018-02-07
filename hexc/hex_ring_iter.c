@@ -20,6 +20,7 @@ static PyObject *iter_ring_new(PyTypeObject *type, PyObject *args, PyObject *kwd
 
 static void iter_ring_dealloc(hexringiter_t *self)
 {
+	Py_XDECREF(self->hex);
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
@@ -29,14 +30,13 @@ static int iter_ring_init(hexringiter_t *self, PyObject *args, PyObject *kwds)
 	if (! PyArg_ParseTupleAndKeywords(args, kwds, "Oi", kwlist, &self->hex, &self->radius))
 		return -1;
 
-	PyObject *rad = Py_BuildValue("i", self->radius);
-	self->hex = PyNumber_Add(self->hex, 
-					PyNumber_Multiply(
-						PyObject_CallMethod(self->hex, "direction", "i", 4), 
-						rad
-						));
-	Py_INCREF(self->hex);						
-	Py_DECREF(rad);
+	PyObject *radius = PyLong_FromLong(self->radius);
+    PyObject *direction = PyObject_CallMethod(self->hex, "direction", "i", 4);
+    PyObject *scaled = PyNumber_Multiply(direction, radius);
+	self->hex = PyNumber_Add(self->hex, scaled); // No incref needed because Py_Number_Add returns a new reference
+	Py_DECREF(radius); // decref all of our temp variables
+    Py_DECREF(direction);
+    Py_DECREF(scaled);
 	return 0;
 }
 
@@ -45,24 +45,19 @@ static PyObject *iter_ring_next(hexringiter_t *self)
 	/* Returning NULL in this case is enough. The next() builtin will raise the
 	 * StopIteration error for us.
 	*/
-	if (self->dir < 6)
+	self->pos++;
+	if (self->pos >= self->radius)
 	{
-		if (self->pos < self->radius)
-		{
-			PyObject *ret = self->hex;
-			self->hex = PyObject_CallMethod(ret, "neighbor", "i", self->dir);
-			self->pos++;
-			return (ret);
-		}
-		else
-		{
-			self->pos = 0;
-			self->dir++;
-			return iter_ring_next(self);
-		}
+		self->pos = 0;
+		self->dir++;
 	}
-	Py_CLEAR(self->hex);
-	return NULL;
+	
+	if (self->dir >= 6)
+		return (NULL);
+
+	PyObject *ret = self->hex;
+	self->hex = PyObject_CallMethod(ret, "neighbor", "i", self->dir);
+	return (ret);
 }
 
 PyTypeObject HexRingGenType = {

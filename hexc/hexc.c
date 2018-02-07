@@ -24,7 +24,7 @@ PyInit_hexc(void)
     if (PyType_Ready(&HexRingGenType) < 0)
         return NULL;
     
-    if (PyType_Ready(&HexRingGenType) < 0)
+    if (PyType_Ready(&HexRangeGenType) < 0)
         return NULL;
     // if (PyType_Ready(&HexGridType) < 0)
     //     return NULL;

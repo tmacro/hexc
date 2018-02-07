@@ -102,7 +102,7 @@ static PyObject *abstract_hex_add(PyObject *self, PyObject *Hex2)
 	s = GETINT(self, "s") + GETINT(Hex2, "s");
 
 	PyObject *argList = Py_BuildValue("iii", q, r, s);
-	PyObject *obj = PyObject_CallObject((PyObject*)self->ob_type, argList);
+	PyObject *obj = PyObject_CallObject(Py_TYPE(self), argList);
 	Py_DECREF(argList);
 	
 	return (obj);
@@ -118,7 +118,7 @@ static PyObject *abstract_hex_subtract(PyObject *self, PyObject *Hex2)
 	s = GETINT(self, "s") - GETINT(Hex2, "s");
 
 	PyObject *argList = Py_BuildValue("iii", q, r, s);
-	PyObject *obj = PyObject_CallObject((PyObject*)self->ob_type, argList);
+	PyObject *obj = PyObject_CallObject(Py_TYPE(self), argList);
 	Py_DECREF(argList);
 	return (obj);
 }
@@ -133,7 +133,7 @@ static PyObject *abstract_hex_scale(PyObject *self, PyObject *z)
 	s = GETINT(self, "s") * scale;
 
 	PyObject *argList = Py_BuildValue("iii", q, r, s);
-	PyObject *obj = PyObject_CallObject((PyObject*)self->ob_type, argList);
+	PyObject *obj = PyObject_CallObject(Py_TYPE(self), argList);
 	Py_DECREF(argList);
 	return (obj);
 }
@@ -225,7 +225,19 @@ static PyObject *abstract_hex_around(PyObject *self, PyObject *args, PyObject *k
 	return obj;
 }
 
-// static int abstract_hex_init(abstracthex_t *self, PyObject *args, PyObject *kwds)
+static PyObject *abstract_hex_within(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+	long radius = 1;
+	static char *kwlist[] = {"radius", NULL};
+
+	if (! PyArg_ParseTupleAndKeywords(args, kwargs, "|i", kwlist, &radius))
+		return NULL;
+
+	PyObject *argsList = Py_BuildValue("Oi", self, radius);
+	PyObject *obj = PyObject_CallObject((PyObject*)&HexRangeGenType, argsList);
+	Py_DECREF(argsList);
+	return obj;
+}
 
 static PyMethodDef abstract_hex_methods[] = {
 	{"length", (PyCFunction)abstract_hex_length, METH_NOARGS,
@@ -241,7 +253,10 @@ static PyMethodDef abstract_hex_methods[] = {
 	"Return the neighboring hex in the given direction."
 	},
 	{"around", (PyCFunction)abstract_hex_around, METH_VARARGS | METH_KEYWORDS,
-	"Return the ring of hexes, radius distance for this."
+	"Return the ring of hexes, radius distance from this hex."
+	},
+	{"within", (PyCFunction)abstract_hex_within, METH_VARARGS | METH_KEYWORDS,
+	"Return the hexes within radius distance inclusively."
 	},
     {NULL}  /* Sentinel */
 };
