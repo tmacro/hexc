@@ -18,9 +18,9 @@ struct hexringiter_s;
 struct hexrangeiter_s;
 
 typedef struct abstracthex_s	abstracthex_t;
+typedef struct hex_s			hex_t;
 typedef struct slice_s			slice_t;
 typedef struct stack_s			stack_t;
-typedef struct hex_s			hex_t;
 typedef struct grid_s			grid_t;
 
 typedef struct hexringiter_s	hexringiter_t;
@@ -32,6 +32,12 @@ struct abstracthex_s
 	int q;
 	int r;
 	int s;
+};
+
+struct hex_s
+{
+	abstracthex_t	abstract;
+	PyObject		*parent;
 };
 
 struct hexringiter_s
