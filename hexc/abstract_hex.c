@@ -1,8 +1,4 @@
 #include "hexc.h"
-#define GETINT(x,y) PyLong_AsLong(PyObject_GetAttr(x, Py_BuildValue("s", y)))
-#define TOLONG(x) PyLong_AsLong(x)
-
-#define hex_to_vec(h) ((vec3_t){GETINT(h, 'q'), GETINT(h, 'r'), GETINT(h, 's')})
 
 // Define class boilerplate functions
 static PyObject *abstract_hex_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
@@ -59,83 +55,195 @@ static PyObject *abstract_hex_repr(abstracthex_t *obj)
 
 static PyObject *abstract_hex_compare(PyObject *self, PyObject *other, int op)
 {
+	long sQ, sR, sS, oQ, oR, oS;
+	PyObject *tmp = NULL;
 	PyObject *result = NULL;
 
-	// if (UndefinedObject_Check(other)) {
-	//	result = Py_NotImplemented;
-	// }
-	// else {
-		switch (op) {
-		case Py_EQ:
-			result = (GETINT(self, "q") == GETINT(other, "q") && GETINT(self, "r") == GETINT(other, "r") && GETINT(self, "s") == GETINT(other, "s")) ? Py_True : Py_False;
-			break;
-		// case Py_LT:
-		//	result = Py_False;
-		//	break;
-		// case Py_LE:
-		//	result = (LargestObject_Check(other)) ? Py_True : Py_False;
-		//	break;
-		// case Py_NE:
-		//	result = (LargestObject_Check(other)) ? Py_False : Py_True;
-		//	break;
-		// case Py_GT:
-		//	result = (LargestObject_Check(other)) ? Py_False : Py_True;
-		//	break;
-		// case Py_GE:
-		//	result = Py_True;
-		//	break;
+	try:
+		if (UndefinedObject_Check(other)) {
+			result = Py_NotImplemented;
 		}
-	// }
-
+		else {
+			switch (op) {
+			case Py_EQ:
+				tmp = PyObject_GetAttrString(self, "q");
+				if (!tmp)
+					goto except;
+				sQ = PyLong_AsLong(tmp);
+				Py_DECREF(tmp);
+				tmp = PyObject_GetAttrString(self, "r");
+				if (!tmp)
+					goto except;
+				sR = PyLong_AsLong(tmp);
+				Py_DECREF(tmp);			
+				tmp = PyObject_GetAttrString(self, "s");
+				if (!tmp)
+					goto except;
+				sS = PyLong_AsLong(tmp);
+				Py_DECREF(tmp);
+				tmp = PyObject_GetAttrString(other, "q");
+				if (!tmp)
+					goto except;
+				oQ = PyLong_AsLong(tmp);
+				Py_DECREF(tmp);
+				tmp = PyObject_GetAttrString(other, "r");
+				if (!tmp)
+					goto except;
+				oR = PyLong_AsLong(tmp);
+				Py_DECREF(tmp);
+				tmp = PyObject_GetAttrString(other, "s");
+				if (!tmp)
+					goto except;
+				oS = PyLong_AsLong(tmp);
+				Py_DECREF(tmp);
+				result = (	sQ == oQ
+						&&	sR == oR
+						&&	sS == oS) ? Py_True : Py_False;
+				// result = (GETINT(self, "q") == GETINT(other, "q") && GETINT(self, "r") == GETINT(other, "r") && GETINT(self, "s") == GETINT(other, "s")) ? Py_True : Py_False;
+				break;
+			// case Py_LT:
+			//	result = Py_False;
+			//	break;
+			// case Py_LE:
+			//	result = (LargestObject_Check(other)) ? Py_True : Py_False;
+			//	break;
+			// case Py_NE:
+			//	result = (LargestObject_Check(other)) ? Py_False : Py_True;
+			//	break;
+			// case Py_GT:
+			//	result = (LargestObject_Check(other)) ? Py_False : Py_True;
+			//	break;
+			// case Py_GE:
+			//	result = Py_True;
+			//	break;
+			}
+		}
+	except:
+		Py_XDECREF(tmp);
+		result = NULL;
 	Py_XINCREF(result);
 	return result;
 }
 
 // Define abstract_hex math functions
 
-static PyObject *abstract_hex_add(PyObject *self, PyObject *Hex2)
+static PyObject *abstract_hex_add(PyObject *self, PyObject *other)
 {
 	long q, r, s;
+	PyObject *sQ, *sR, *sS, *oQ, *oR, *oS, *ret, *argList;
+	sQ = sR = sS = oQ = oR = oS = ret = argList = NULL;
+	goto try;
 
-	q = GETINT(self, "q") + GETINT(Hex2, "q");
-	r = GETINT(self, "r") + GETINT(Hex2, "r");
-	s = GETINT(self, "s") + GETINT(Hex2, "s");
+	try:
+		if (!PyObject_HasAttrString(other, "q") || !PyObject_HasAttrString(other, "r") || !PyObject_HasAttrString(other, "s"))
+		{
+			PyErr_SetString(PyExc_TypeError, "Second arguement does not implement AbstractHex interface.");
+			goto except;
+		}
+		sQ = GET_ATTR(self, "q");
+		sR = GET_ATTR(self, "r");
+		sS = GET_ATTR(self, "s");
+		oQ = GET_ATTR(other, "q");
+		oR = GET_ATTR(other, "r");
+		oS = GET_ATTR(other, "s");
 
-	PyObject *argList = Py_BuildValue("iii", q, r, s);
-	PyObject *obj = PyObject_CallObject((PyObject*)self->ob_type, argList);
-	Py_DECREF(argList);
-	
-	return (obj);
+		q = PyLong_AsLong(sQ) + PyLong_AsLong(oQ);
+		r = PyLong_AsLong(sR) + PyLong_AsLong(oR);
+		s = PyLong_AsLong(sS) + PyLong_AsLong(oS);
+
+		assert(!PyErr_Occurred());
+
+		argList = Py_BuildValue("iii", q, r, s);
+		ret = PyObject_CallObject((PyObject*)self->ob_type, argList);
+		assert(ret);
+		goto finally;
+
+	except:
+		Py_XDECREF(ret);
+		Py_XDECREF(argList);
+		assert(PyErr_Occurred());
+		ret = NULL;
+
+	finally:
+		Py_XDECREF(argList);		
+		return (ret);
 }
 
-static PyObject *abstract_hex_subtract(PyObject *self, PyObject *Hex2)
+static PyObject *abstract_hex_subtract(PyObject *self, PyObject *other)
 {
 	long q, r, s;
+	PyObject *sQ, *sR, *sS, *oQ, *oR, *oS, *ret, *argList;
+	sQ = sR = sS = oQ = oR = oS = ret = argList = NULL;
+	goto try;
 
+	try:
+		if (!PyObject_HasAttrString(other, "q") || !PyObject_HasAttrString(other, "r") || !PyObject_HasAttrString(other, "s"))
+		{
+			PyErr_SetString(PyExc_TypeError, "Second arguement does not implement AbstractHex interface.");
+			goto except;
+		}
+		sQ = GET_ATTR(self, "q");
+		sR = GET_ATTR(self, "r");
+		sS = GET_ATTR(self, "s");
+		oQ = GET_ATTR(other, "q");
+		oR = GET_ATTR(other, "r");
+		oS = GET_ATTR(other, "s");
 
-	q = GETINT(self, "q") - GETINT(Hex2, "q");
-	r = GETINT(self, "r") - GETINT(Hex2, "r");
-	s = GETINT(self, "s") - GETINT(Hex2, "s");
+		q = PyLong_AsLong(sQ) - PyLong_AsLong(oQ);
+		r = PyLong_AsLong(sR) - PyLong_AsLong(oR);
+		s = PyLong_AsLong(sS) - PyLong_AsLong(oS);
 
-	PyObject *argList = Py_BuildValue("iii", q, r, s);
-	PyObject *obj = PyObject_CallObject((PyObject*)self->ob_type, argList);
-	Py_DECREF(argList);
-	return (obj);
+		assert(!PyErr_Occurred());
+
+		argList = Py_BuildValue("iii", q, r, s);
+		ret = PyObject_CallObject((PyObject*)self->ob_type, argList);
+		assert(ret);
+		goto finally;
+
+	except:
+		Py_XDECREF(ret);
+		Py_XDECREF(argList);
+		assert(PyErr_Occurred());
+		ret = NULL;
+
+	finally:
+		Py_XDECREF(argList);		
+		return (ret);
 }
 
 static PyObject *abstract_hex_scale(PyObject *self, PyObject *z)
 {
 	long q, r, s, scale;
-	scale = TOLONG(z);
+	PyObject *sQ, *sR, *sS, *ret, *argList;
+	sQ = sR = sS = ret = argList = NULL;
+	goto try;
 
-	q = GETINT(self, "q") * scale;
-	r = GETINT(self, "r") * scale;
-	s = GETINT(self, "s") * scale;
+	try:
+		scale = PyLong_AsLong(z);
+		sQ = GET_ATTR(self, "q");
+		sR = GET_ATTR(self, "r");
+		sS = GET_ATTR(self, "s");
 
-	PyObject *argList = Py_BuildValue("iii", q, r, s);
-	PyObject *obj = PyObject_CallObject((PyObject*)self->ob_type, argList);
-	Py_DECREF(argList);
-	return (obj);
+		q = PyLong_AsLong(sQ) * scale;
+		r = PyLong_AsLong(sR) * scale;
+		s = PyLong_AsLong(sS) * scale;
+
+		assert(!PyErr_Occurred());
+
+		argList = Py_BuildValue("iii", q, r, s);
+		ret = PyObject_CallObject((PyObject*)self->ob_type, argList);
+		assert(ret);
+		goto finally;
+
+	except:
+		Py_XDECREF(ret);
+		Py_XDECREF(argList);
+		assert(PyErr_Occurred());
+		ret = NULL;
+
+	finally:
+		Py_XDECREF(argList);		
+		return (ret);
 }
 
 // define struct for mathmatical operations tp_as_number
@@ -181,34 +289,111 @@ static PyNumberMethods abstract_hex_num_meths[] = {
 static PyObject *abstract_hex_length(PyObject *self)
 {
 	long q, r, s, len;
+	PyObject *sQ = NULL, *sR = NULL, *sS = NULL, *ret = NULL;
+	goto try;
 
-	q = GETINT(self, "q");
-	r = GETINT(self, "r");
-	s = GETINT(self, "s");	
+	try:
+		sQ = GET_ATTR(self, "q");
+		sR = GET_ATTR(self, "r");
+		sS = GET_ATTR(self, "s");
 
-	len = (abs(q) + abs(r) + abs(s)) / 2;
-	return Py_BuildValue("i", len);
+		if (PyErr_Occurred() != NULL)
+			goto except;
+
+		len = (abs(PyLong_AsLong(sQ)) + abs(PyLong_AsLong(sR)) + abs(PyLong_AsLong(sS))) / 2;
+
+		ret = Py_BuildValue("i", len);
+		if (PyErr_Occurred())
+			goto except;
+		assert(ret);
+		goto finally;
+
+	except:
+		Py_XDECREF(ret);
+		assert(PyErr_Occurred());
+		ret = NULL;
+
+	finally:
+		Py_XDECREF(sQ);
+		Py_XDECREF(sR);
+		Py_XDECREF(sS);
+		return (ret);
 }
 
 static PyObject *abstract_hex_distance(PyObject *self, PyObject *hex2)
 {
-	return PyObject_CallMethod(PyNumber_Subtract(self, hex2), "length", NULL);
-	// return abstract_hex_length(abstract_hex_subtract(self, hex2));
+	PyObject *sub = NULL, *ret = NULL;
+	goto try;
+
+	try:
+		sub = PyNumber_Subtract(self, hex2);
+		assert(sub);
+		if (PyErr_Occurred() != NULL)
+			goto except;
+
+		ret = PyObject_CallMethod(sub, "length", NULL);
+		assert(ret);
+		if (PyErr_Occurred() != NULL)
+			goto except;
+		goto finally;
+
+	except:
+		Py_XDECREF(ret);
+		assert(PyErr_Occurred());
+		ret = NULL;
+
+	finally:
+		Py_XDECREF(sub);
+		return (ret);
 }
 
 static PyObject *abstract_hex_direction(PyObject *self, PyObject *direction)
 {
-	long dir = TOLONG(direction);
-	PyObject *argList = Py_BuildValue("iii", DIRECTIONS[dir][0], DIRECTIONS[dir][1], DIRECTIONS[dir][2]);
-	PyObject *obj = PyObject_CallObject((PyObject*)self->ob_type, argList);
-	Py_DECREF(argList);	
-	return obj;
+	long dir = PyLong_AsLong(direction);
+	PyObject *argList = NULL, *ret = NULL;
+
+	try:
+		argList = Py_BuildValue("iii", DIRECTIONS[dir][0], DIRECTIONS[dir][1], DIRECTIONS[dir][2]);
+		if (argList == NULL || PyErr_Occurred() != NULL)
+			goto except;
+		assert(argList);
+		ret = PyObject_CallObject((PyObject*)self->ob_type, argList);
+		if (ret == NULL || PyErr_Occurred() != NULL)
+			goto except;
+		assert(ret);
+		goto finally;
+
+	except:
+		Py_XDECREF(ret);
+		ret = NULL;
+
+	finally:
+		Py_XDECREF(argList);
+		return (ret);
 }
 
 static PyObject *abstract_hex_neighbor(PyObject *self, PyObject *direction)
 {
-	return PyNumber_Add(self, PyObject_CallMethod(self, "direction", "O", direction));
-	// return abstract_hex_add(self, abstract_hex_direction(self, direction));
+	PyObject *dir = NULL, *ret = NULL;
+
+	try:
+		dir  = PyObject_CallMethod(self, "direction", "O", direction);
+		if (dir == NULL || PyErr_Occurred() != NULL)
+			goto except;
+		assert(dir);
+		ret = PyNumber_Add(self, dir);
+		if (ret == NULL || PyErr_Occurred() != NULL)
+			goto except;
+		assert(ret);
+		goto finally;
+
+	except:
+		Py_XDECREF(ret);
+		ret = NULL;
+
+	finally:
+		Py_XDECREF(dir);
+		return (ret);
 }
 
 static PyObject *abstract_hex_around(PyObject *self, PyObject *args, PyObject *kwargs)
