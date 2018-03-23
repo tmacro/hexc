@@ -26,6 +26,9 @@ PyInit_hexc(void)
     
     if (PyType_Ready(&HexRangeGenType) < 0)
         return NULL;
+
+    if (PyType_Ready(&StackType) < 0)
+        return NULL;
     // if (PyType_Ready(&HexGridType) < 0)
     //     return NULL;
 
@@ -36,9 +39,11 @@ PyInit_hexc(void)
 	Py_INCREF(&AbstractHexType);
 	Py_INCREF(&HexRingGenType);
 	Py_INCREF(&HexRangeGenType);
+	Py_INCREF(&StackType);
     PyModule_AddObject(m, "AbstractHex", (PyObject *)&AbstractHexType);
     PyModule_AddObject(m, "HexRingGenerator", (PyObject *)&HexRingGenType);
     PyModule_AddObject(m, "HexRangeGenerator", (PyObject *)&HexRangeGenType);
+    PyModule_AddObject(m, "Stack", (PyObject *)&StackType);
     // Py_INCREF(&HexGridType);
     // PyModule_AddObject(m, "Grid", (PyObject *)&HexGridType);
 

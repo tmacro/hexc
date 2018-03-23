@@ -27,17 +27,64 @@ static void iter_ring_dealloc(hexringiter_t *self)
 static int iter_ring_init(hexringiter_t *self, PyObject *args, PyObject *kwds)
 {
 	static char *kwlist[] = {"center", "radius", NULL};
-	if (! PyArg_ParseTupleAndKeywords(args, kwds, "Oi", kwlist, &self->hex, &self->radius))
-		return -1;
+	// if (! PyArg_ParseTupleAndKeywords(args, kwds, "Oi", kwlist, &self->hex, &self->radius))
+	// 	return -1;
 
-	PyObject *radius = PyLong_FromLong(self->radius);
-	PyObject *direction = PyObject_CallMethod(self->hex, "direction", "i", 4);
-	PyObject *scaled = PyNumber_Multiply(direction, radius);
-	self->hex = PyNumber_Add(self->hex, scaled); // No incref needed because Py_Number_Add returns a new reference
-	Py_DECREF(radius); // decref all of our temp variables
-	Py_DECREF(direction);
-	Py_DECREF(scaled);
-	return 0;
+	// PyObject *radius = PyLong_FromLong(self->radius);
+	// PyObject *direction = PyObject_CallMethod(self->hex, "direction", "i", 4);
+	// PyObject *scaled = PyNumber_Multiply(direction, radius);
+	// self->hex = PyNumber_Add(self->hex, scaled); // No incref needed because Py_Number_Add returns a new reference
+	// Py_DECREF(radius); // decref all of our temp variables
+	// Py_DECREF(direction);
+	// Py_DECREF(scaled);
+	// return 0;
+
+	PyObject *radius = NULL, *direction = NULL, *scaled = NULL;
+	goto try;
+
+	try:
+		if (! PyArg_ParseTupleAndKeywords(args, kwds, "Oi", kwlist, &self->hex, &self->radius))
+			goto except;
+
+		assert(self->hex);
+
+		if (PyErr_Occurred() != NULL)
+			goto except;
+
+		radius = PyLong_FromLong(self->radius);
+		if (PyErr_Occurred() != NULL || !radius)
+			goto except;
+		assert(radius);
+
+		direction = PyObject_CallMethod(self->hex, "direction", "i", 4);
+		if (PyErr_Occurred() != NULL || !direction)
+			goto except;
+		assert(direction);
+
+		scaled = PyNumber_Multiply(direction, radius);
+		if (PyErr_Occurred() != NULL || !scaled)
+			goto except;
+		assert(scaled);
+
+		self->hex = PyNumber_Add(self->hex, scaled); // No incref needed because Py_Number_Add returns a new reference
+		if (PyErr_Occurred() != NULL || !self->hex)
+			goto except;
+		assert(self->hex);
+
+		goto finally;
+
+	except:
+		Py_XDECREF(radius); // decref all of our temp variables
+		Py_XDECREF(direction);
+		Py_XDECREF(scaled);
+		assert(PyErr_Occurred());
+		return (-1);
+
+	finally:
+		Py_DECREF(radius); // decref all of our temp variables
+		Py_DECREF(direction);
+		Py_DECREF(scaled);
+		return (0);
 }
 
 static PyObject *iter_ring_next(hexringiter_t *self)
@@ -53,10 +100,12 @@ static PyObject *iter_ring_next(hexringiter_t *self)
 	}
 	
 	if (self->dir >= 6)
+	{
+		// Py_DECREF(self->hex);
 		return (NULL);
-
-	PyObject *ret = self->hex;
-	self->hex = PyObject_CallMethod(ret, "neighbor", "i", self->dir);
+	}
+	PyObject *ret = self->hex; // We don't need to incref or decref here because CallMethod creates a new reference
+	self->hex = PyObject_CallMethod(ret, "neighbor", "i", self->dir); // So we use that to store it, and when we return it ,it "transfers"
 	return (ret);
 }
 

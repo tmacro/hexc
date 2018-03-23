@@ -4,7 +4,10 @@
 #include <Python.h>
 #include <structmember.h>
 #include <stdlib.h>
+#include <Judy.h>
 
+#define GET_ATTR(obj, attr) PyObject_GetAttrString(obj, attr)
+#define HASH_SIZE 34
 // #include "math_3d.h"
 
 // declare Hex object structure
@@ -60,23 +63,46 @@ struct hexrangeiter_s
 	PyObject *center;
 };
 
+struct stack_s
+{
+	PyObject_HEAD
+	long radius;
+	long height;
+	Pvoid_t chunk;
+	PyObject *parent;
+};
+
+struct grid_s
+{
+	PyObject_HEAD
+	PyObject **stacks;
+};
+
 // declare Python type objects
 extern PyTypeObject AbstractHexType;
 extern PyTypeObject HexRingGenType;
 extern PyTypeObject HexRangeGenType;
-extern PyTypeObject HexType;
-extern PyTypeObject SliceType;
+// extern PyTypeObject HexType;
+// extern PyTypeObject SliceType;
 extern PyTypeObject StackType;
-extern PyTypeObject GridType;
+// extern PyTypeObject GridType;
 
 // declare some handy constants
+// static int	DIRECTIONS[6][3] = {
+// 	{1, 0, -1},
+// 	{1, -1, 0},
+// 	{0, -1, 1},
+// 	{-1, 0, 1},
+// 	{-1, 1, 0},
+// 	{0, 1, -1}
+// };
 static int	DIRECTIONS[6][3] = {
-	{1, 0, -1},
 	{1, -1, 0},
-	{0, -1, 1},
-	{-1, 0, 1},
+	{1, 0, -1},
+	{0, 1, -1},
 	{-1, 1, 0},
-	{0, 1, -1}
+	{-1, 0, 1},
+	{0, -1, 1}
 };
 
 #endif

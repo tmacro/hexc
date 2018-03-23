@@ -22,7 +22,7 @@ def translate_to_rst(text):
 
 hexc_ext = Extension(
 	'hexc',
-	libraries = [],
+	libraries = ['Judy'],
 	sources = glob('hexc/*.c'),
 	include_dirs = ['hexc/', '/usr/local/include'],
 	library_dirs = ['/usr/local/lib']

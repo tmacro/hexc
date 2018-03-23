@@ -60,69 +60,66 @@ static PyObject *abstract_hex_compare(PyObject *self, PyObject *other, int op)
 	PyObject *result = NULL;
 
 	try:
-		if (UndefinedObject_Check(other)) {
-			result = Py_NotImplemented;
-		}
-		else {
-			switch (op) {
-			case Py_EQ:
-				tmp = PyObject_GetAttrString(self, "q");
-				if (!tmp)
-					goto except;
-				sQ = PyLong_AsLong(tmp);
-				Py_DECREF(tmp);
-				tmp = PyObject_GetAttrString(self, "r");
-				if (!tmp)
-					goto except;
-				sR = PyLong_AsLong(tmp);
-				Py_DECREF(tmp);			
-				tmp = PyObject_GetAttrString(self, "s");
-				if (!tmp)
-					goto except;
-				sS = PyLong_AsLong(tmp);
-				Py_DECREF(tmp);
-				tmp = PyObject_GetAttrString(other, "q");
-				if (!tmp)
-					goto except;
-				oQ = PyLong_AsLong(tmp);
-				Py_DECREF(tmp);
-				tmp = PyObject_GetAttrString(other, "r");
-				if (!tmp)
-					goto except;
-				oR = PyLong_AsLong(tmp);
-				Py_DECREF(tmp);
-				tmp = PyObject_GetAttrString(other, "s");
-				if (!tmp)
-					goto except;
-				oS = PyLong_AsLong(tmp);
-				Py_DECREF(tmp);
-				result = (	sQ == oQ
-						&&	sR == oR
-						&&	sS == oS) ? Py_True : Py_False;
-				// result = (GETINT(self, "q") == GETINT(other, "q") && GETINT(self, "r") == GETINT(other, "r") && GETINT(self, "s") == GETINT(other, "s")) ? Py_True : Py_False;
-				break;
-			// case Py_LT:
-			//	result = Py_False;
-			//	break;
-			// case Py_LE:
-			//	result = (LargestObject_Check(other)) ? Py_True : Py_False;
-			//	break;
-			// case Py_NE:
-			//	result = (LargestObject_Check(other)) ? Py_False : Py_True;
-			//	break;
-			// case Py_GT:
-			//	result = (LargestObject_Check(other)) ? Py_False : Py_True;
-			//	break;
-			// case Py_GE:
-			//	result = Py_True;
-			//	break;
-			}
+		switch (op) {
+		case Py_EQ:
+			tmp = PyObject_GetAttrString(self, "q");
+			if (!tmp)
+				goto except;
+			sQ = PyLong_AsLong(tmp);
+			Py_DECREF(tmp);
+			tmp = PyObject_GetAttrString(self, "r");
+			if (!tmp)
+				goto except;
+			sR = PyLong_AsLong(tmp);
+			Py_DECREF(tmp);			
+			tmp = PyObject_GetAttrString(self, "s");
+			if (!tmp)
+				goto except;
+			sS = PyLong_AsLong(tmp);
+			Py_DECREF(tmp);
+			tmp = PyObject_GetAttrString(other, "q");
+			if (!tmp)
+				goto except;
+			oQ = PyLong_AsLong(tmp);
+			Py_DECREF(tmp);
+			tmp = PyObject_GetAttrString(other, "r");
+			if (!tmp)
+				goto except;
+			oR = PyLong_AsLong(tmp);
+			Py_DECREF(tmp);
+			tmp = PyObject_GetAttrString(other, "s");
+			if (!tmp)
+				goto except;
+			oS = PyLong_AsLong(tmp);
+			Py_DECREF(tmp);
+			result = (	sQ == oQ
+					&&	sR == oR
+					&&	sS == oS) ? Py_True : Py_False;
+			// result = (GETINT(self, "q") == GETINT(other, "q") && GETINT(self, "r") == GETINT(other, "r") && GETINT(self, "s") == GETINT(other, "s")) ? Py_True : Py_False;
+			goto finally;
+		// case Py_LT:
+		//	result = Py_False;
+		//	break;
+		// case Py_LE:
+		//	result = (LargestObject_Check(other)) ? Py_True : Py_False;
+		//	break;
+		// case Py_NE:
+		//	result = (LargestObject_Check(other)) ? Py_False : Py_True;
+		//	break;
+		// case Py_GT:
+		//	result = (LargestObject_Check(other)) ? Py_False : Py_True;
+		//	break;
+		// case Py_GE:
+		//	result = Py_True;
+		//	break;
 		}
 	except:
 		Py_XDECREF(tmp);
 		result = NULL;
-	Py_XINCREF(result);
-	return result;
+	
+	finally:
+		Py_XINCREF(result);
+		return result;
 }
 
 // Define abstract_hex math functions
