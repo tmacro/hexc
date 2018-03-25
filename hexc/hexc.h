@@ -7,7 +7,7 @@
 #include <Judy.h>
 
 #define GET_ATTR(obj, attr) PyObject_GetAttrString(obj, attr)
-#define HASH_SIZE 34
+#define HASH_SIZE 45
 // #include "math_3d.h"
 
 // declare Hex object structure
@@ -35,6 +35,7 @@ struct abstracthex_s
 	int q;
 	int r;
 	int s;
+	int z;
 };
 
 struct hex_s
@@ -82,7 +83,7 @@ struct grid_s
 extern PyTypeObject AbstractHexType;
 extern PyTypeObject HexRingGenType;
 extern PyTypeObject HexRangeGenType;
-// extern PyTypeObject HexType;
+extern PyTypeObject HexType;
 // extern PyTypeObject SliceType;
 extern PyTypeObject StackType;
 // extern PyTypeObject GridType;
@@ -96,13 +97,15 @@ extern PyTypeObject StackType;
 // 	{-1, 1, 0},
 // 	{0, 1, -1}
 // };
-static int	DIRECTIONS[6][3] = {
-	{1, -1, 0},
-	{1, 0, -1},
-	{0, 1, -1},
-	{-1, 1, 0},
-	{-1, 0, 1},
-	{0, -1, 1}
+static int	DIRECTIONS[8][4] = {
+	{ 1, -1,  0,  0}, 
+	{ 1,  0, -1,  0},	//     __<--2	
+	{ 0,  1, -1,  0},	// 3--/  \--1	FLAT TOP
+	{-1,  1,  0,  0},	// 4--\__/--0
+	{-1,  0,  1,  0},	// 5----^     	6/7 = UP/DOWN
+	{ 0, -1,  1,  0},	//  2--/\--1
+	{ 0,  0,  0,  1},	//  3-|  |-0 	POINTY TOP
+	{ 0,  0,  0, -1}	//  4--\/--5
 };
 
 #endif

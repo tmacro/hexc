@@ -1,44 +1,56 @@
 #include "hexc.h"
 
 // Define class boilerplate functions
-static PyObject *abstract_hex_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
+static PyObject *concrete_hex_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
-	abstracthex_t *self;
+	hex_t *self;
 
-	self = (abstracthex_t *)type->tp_alloc(type, 0);
+	self = (hex_t *)type->tp_alloc(type, 0);
 	if (self != NULL) {
-		self->q = 0;
-		self->r = 0;
-		self->s = 0;
-		self->z = 0;
+		((abstracthex_t*)self)->q = 0;
+		((abstracthex_t*)self)->r = 0;
+		((abstracthex_t*)self)->s = 0;
+		((abstracthex_t*)self)->z = 0;
+        self->parent = NULL;
 	}
 
 	return (PyObject *)self;
 }
 
-static void abstract_hex_dealloc(abstracthex_t *self)
+static void concrete_hex_dealloc(hex_t *self)
 {
+	if (self->parent)
+    	Py_XDECREF(self->parent);
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
-static int abstract_hex_init(abstracthex_t *self, PyObject *args, PyObject *kwds)
+static int concrete_hex_init(hex_t *self, PyObject *args, PyObject *kwds)
 {
-	static char *kwlist[] = {"q", "r", "s", "z", NULL};
-
-	if (! PyArg_ParseTupleAndKeywords(args, kwds, "ii|ii", kwlist, &self->q, &self->r, &self->s, &self->z))
+	static char *kwlist[] = {"q", "r", "s", "z", "parent", NULL};
+	
+	if (! PyArg_ParseTupleAndKeywords(args, kwds, "ii|iiO", kwlist, 
+        &((abstracthex_t*)self)->q, &((abstracthex_t*)self)->r,
+		&((abstracthex_t*)self)->s, &((abstracthex_t*)self)->z,
+		&self->parent))
 		return -1;
 
-	if (self->q + self->r + self->s !=0 && self->s == 0)
-		self->s = -self->q - self->r;
-	else if (self->q + self->r + self->s !=0 && self->s != 0)
+	if (((abstracthex_t*)self)->q + ((abstracthex_t*)self)->r + ((abstracthex_t*)self)->s !=0 && ((abstracthex_t*)self)->s == 0)
+		((abstracthex_t*)self)->s = -((abstracthex_t*)self)->q - ((abstracthex_t*)self)->r;
+	else if (((abstracthex_t*)self)->q + ((abstracthex_t*)self)->r + ((abstracthex_t*)self)->s !=0 && ((abstracthex_t*)self)->s != 0)
 	{
 		PyErr_SetString(PyExc_TypeError, "Invalid hexagonal coordinates!");
 		return -1;
 	}
+    
+    if (self->parent == NULL)
+	{
+        self->parent = Py_None;
+    	Py_INCREF(self->parent);
+	}
 	return 0;
 }
 
-static PyMemberDef abstract_hex_members[] = {
+static PyMemberDef concrete_hex_members[] = {
 	{"q", T_INT, offsetof(abstracthex_t, q), 0,
 	 "q"},
 	{"r", T_INT, offsetof(abstracthex_t, r), 0,
@@ -47,16 +59,18 @@ static PyMemberDef abstract_hex_members[] = {
 	 "s"},
 	{"z", T_INT, offsetof(abstracthex_t, z), 0,
 	 "z"},
+    {"parent", T_OBJECT, offsetof(hex_t, parent), 0,
+    "parent"},
 	{NULL}	/* Sentinel */
 };
 
-static PyObject *abstract_hex_repr(abstracthex_t *obj)
+static PyObject *concrete_hex_repr(abstracthex_t *obj)
 {
-	return PyUnicode_FromFormat("AbstractHex(q:\%i, r:\%i, s:\%i, z:\%i)",
+	return PyUnicode_FromFormat("Hex(q:\%i, r:\%i, s:\%i, z:\%i)",
 									obj->q, obj->r, obj->s, obj->z);
 }
 
-static PyObject *abstract_hex_compare(PyObject *self, PyObject *other, int op)
+static PyObject *concrete_hex_compare(PyObject *self, PyObject *other, int op)
 {
 	long sQ, sR, sS, sZ, oQ, oR, oS, oZ;
 	PyObject *tmp = NULL;
@@ -146,10 +160,10 @@ static PyObject *abstract_hex_compare(PyObject *self, PyObject *other, int op)
 
 // Define abstract_hex math functions
 
-static PyObject *abstract_hex_add(PyObject *self, PyObject *other)
+static PyObject *concrete_hex_add(PyObject *self, PyObject *other)
 {
 	long q, r, s, z, sQ, sR, sS, sZ, oQ, oR, oS, oZ;	
-	PyObject *ret = NULL, *argList = NULL, *tmp = NULL;
+	PyObject *ret = NULL, *argList = NULL, *tmp = NULL, *parent = NULL;
 	goto try;
 
 	try:
@@ -206,6 +220,10 @@ static PyObject *abstract_hex_add(PyObject *self, PyObject *other)
 			goto except;
 		oZ = PyLong_AsLong(tmp);
 		Py_DECREF(tmp);
+
+		parent = PyObject_GetAttrString(self, "parent");
+		if (!parent)
+			goto except;
 
 		assert(!PyErr_Occurred());
 
@@ -214,11 +232,12 @@ static PyObject *abstract_hex_add(PyObject *self, PyObject *other)
 		s = sS + oS;
 		z = sZ + oZ;
 
-		argList = Py_BuildValue("iiii", q, r, s, z);
+		argList = Py_BuildValue("iiiiO", q, r, s, z, parent);
 		if (!argList)
 			goto except;
 		ret = PyObject_CallObject((PyObject*)self->ob_type, argList);
 		Py_DECREF(argList);		
+		Py_DECREF(parent);
 		if(!ret)
 			goto except;
 		assert(ret);
@@ -228,6 +247,7 @@ static PyObject *abstract_hex_add(PyObject *self, PyObject *other)
 		Py_XDECREF(tmp);
 		Py_XDECREF(ret);
 		Py_XDECREF(argList);
+		Py_XDECREF(parent);
 		assert(PyErr_Occurred());
 		ret = NULL;
 
@@ -235,10 +255,10 @@ static PyObject *abstract_hex_add(PyObject *self, PyObject *other)
 		return (ret);
 }
 
-static PyObject *abstract_hex_subtract(PyObject *self, PyObject *other)
+static PyObject *concrete_hex_subtract(PyObject *self, PyObject *other)
 {
 	long q, r, s, z, sQ, sR, sS, sZ, oQ, oR, oS, oZ;
-	PyObject *ret = NULL, *argList = NULL, *tmp = NULL;
+	PyObject *ret = NULL, *argList = NULL, *tmp = NULL, *parent = NULL;
 	goto try;
 
 	try:
@@ -296,6 +316,10 @@ static PyObject *abstract_hex_subtract(PyObject *self, PyObject *other)
 		oZ = PyLong_AsLong(tmp);
 		Py_DECREF(tmp);
 
+		parent = PyObject_GetAttrString(self, "parent");
+		if (!parent)
+			goto except;
+
 		assert(!PyErr_Occurred());
 
 		q = sQ - oQ;
@@ -303,11 +327,12 @@ static PyObject *abstract_hex_subtract(PyObject *self, PyObject *other)
 		s = sS - oS;
 		z = sZ - oZ;
 
-		argList = Py_BuildValue("iiii", q, r, s, z);
+		argList = Py_BuildValue("iiiiO", q, r, s, z, parent);
 		if (!argList)
 			goto except;
 		ret = PyObject_CallObject((PyObject*)self->ob_type, argList);
 		Py_DECREF(argList);		
+		Py_DECREF(parent);
 		if(!ret)
 			goto except;
 		assert(ret);
@@ -317,6 +342,7 @@ static PyObject *abstract_hex_subtract(PyObject *self, PyObject *other)
 		Py_XDECREF(tmp);
 		Py_XDECREF(ret);
 		Py_XDECREF(argList);
+		Py_XDECREF(parent);
 		assert(PyErr_Occurred());
 		ret = NULL;
 
@@ -324,10 +350,10 @@ static PyObject *abstract_hex_subtract(PyObject *self, PyObject *other)
 		return (ret);
 }
 
-static PyObject *abstract_hex_scale(PyObject *self, PyObject *scalar)
+static PyObject *concrete_hex_scale(PyObject *self, PyObject *scalar)
 {
 	long q, r, s, z, sQ, sR, sS, sZ, scale;	
-	PyObject *ret = NULL, *argList = NULL, *tmp = NULL;
+	PyObject *ret = NULL, *argList = NULL, *tmp = NULL, *parent = NULL;
 	goto try;
 
 	try:
@@ -357,6 +383,10 @@ static PyObject *abstract_hex_scale(PyObject *self, PyObject *scalar)
 
 		scale = PyLong_AsLong(scalar);
 
+		parent = PyObject_GetAttrString(self, "parent");
+		if (!parent)
+			goto except;
+
 		assert(!PyErr_Occurred());
 
 		q = sQ * scale;
@@ -364,11 +394,12 @@ static PyObject *abstract_hex_scale(PyObject *self, PyObject *scalar)
 		s = sS * scale;
 		z = sZ * scale;
 
-		argList = Py_BuildValue("iiii", q, r, s, z);
+		argList = Py_BuildValue("iiiiO", q, r, s, z, parent);
 		if (!argList)
 			goto except;
 		ret = PyObject_CallObject((PyObject*)self->ob_type, argList);
-		Py_DECREF(argList);		
+		Py_DECREF(argList);	
+		Py_DECREF(parent);	
 		if(!ret)
 			goto except;
 		assert(ret);
@@ -378,6 +409,7 @@ static PyObject *abstract_hex_scale(PyObject *self, PyObject *scalar)
 		Py_XDECREF(tmp);
 		Py_XDECREF(ret);
 		Py_XDECREF(argList);
+		Py_XDECREF(parent);	
 		assert(PyErr_Occurred());
 		ret = NULL;
 
@@ -386,10 +418,10 @@ static PyObject *abstract_hex_scale(PyObject *self, PyObject *scalar)
 }
 
 // define struct for mathmatical operations tp_as_number
-static PyNumberMethods abstract_hex_num_meths[] = {
-			&abstract_hex_add,		// nb_add;
-			&abstract_hex_subtract,	// nb_subtract;
-			&abstract_hex_scale,	// nb_multiply;
+static PyNumberMethods concrete_hex_num_meths[] = {
+			&concrete_hex_add,		// nb_add;
+			&concrete_hex_subtract,	// nb_subtract;
+			&concrete_hex_scale,	// nb_multiply;
 			0,						// nb_remainder;
 			0, 						//_divmod;
 			0, 						//_power;
@@ -425,9 +457,9 @@ static PyNumberMethods abstract_hex_num_meths[] = {
 			0, 						//_inplace_matrix_multiply;
 };
 
-static PyObject *abstract_hex_length(PyObject *self)
+static PyObject *concrete_hex_length(PyObject *self)
 {
-	long q, r, s, len;
+	long len;
 	PyObject *sQ = NULL, *sR = NULL, *sS = NULL, *ret = NULL;
 	goto try;
 
@@ -459,7 +491,7 @@ static PyObject *abstract_hex_length(PyObject *self)
 		return (ret);
 }
 
-static PyObject *abstract_hex_distance(PyObject *self, PyObject *hex2)
+static PyObject *concrete_hex_distance(PyObject *self, PyObject *hex2)
 {
 	PyObject *sub = NULL, *ret = NULL;
 	goto try;
@@ -486,19 +518,22 @@ static PyObject *abstract_hex_distance(PyObject *self, PyObject *hex2)
 		return (ret);
 }
 
-static PyObject *abstract_hex_direction(PyObject *self, PyObject *direction)
+static PyObject *concrete_hex_direction(PyObject *self, PyObject *direction)
 {
 	long dir = PyLong_AsLong(direction);
-	PyObject *argList = NULL, *ret = NULL;
-	if (dir > 7)
-		goto except;
+	PyObject *argList = NULL, *ret = NULL, *parent = NULL;
 
 	try:
+		parent = PyObject_GetAttrString(self, "parent");
+		if (parent == NULL || PyErr_Occurred() != NULL)
+			goto except;
+		
 		argList = Py_BuildValue("iiii", DIRECTIONS[dir][0], DIRECTIONS[dir][1],
 										DIRECTIONS[dir][2], DIRECTIONS[dir][3]);
 		if (argList == NULL || PyErr_Occurred() != NULL)
 			goto except;
 		assert(argList);
+
 		ret = PyObject_CallObject((PyObject*)self->ob_type, argList);
 		if (ret == NULL || PyErr_Occurred() != NULL)
 			goto except;
@@ -507,14 +542,18 @@ static PyObject *abstract_hex_direction(PyObject *self, PyObject *direction)
 
 	except:
 		Py_XDECREF(ret);
+		Py_XDECREF(parent);
+		Py_XDECREF(argList);	
 		ret = NULL;
+		return (ret);
 
 	finally:
-		Py_XDECREF(argList);
+		Py_DECREF(argList);
+		Py_DECREF(parent);
 		return (ret);
 }
 
-static PyObject *abstract_hex_neighbor(PyObject *self, PyObject *direction)
+static PyObject *concrete_hex_neighbor(PyObject *self, PyObject *direction)
 {
 	PyObject *dir = NULL, *ret = NULL;
 
@@ -538,7 +577,7 @@ static PyObject *abstract_hex_neighbor(PyObject *self, PyObject *direction)
 		return (ret);
 }
 
-static PyObject *abstract_hex_around(PyObject *self, PyObject *args, PyObject *kwargs)
+static PyObject *concrete_hex_around(PyObject *self, PyObject *args, PyObject *kwargs)
 {
 	long radius = 1;
 	static char *kwlist[] = {"radius", NULL};
@@ -552,7 +591,7 @@ static PyObject *abstract_hex_around(PyObject *self, PyObject *args, PyObject *k
 	return obj;
 }
 
-static PyObject *abstract_hex_within(PyObject *self, PyObject *args, PyObject *kwargs)
+static PyObject *concrete_hex_within(PyObject *self, PyObject *args, PyObject *kwargs)
 {
 	long radius = 1;
 	static char *kwlist[] = {"radius", NULL};
@@ -566,41 +605,126 @@ static PyObject *abstract_hex_within(PyObject *self, PyObject *args, PyObject *k
 	return obj;
 }
 
-static PyMethodDef abstract_hex_methods[] = {
-	{"length", (PyCFunction)abstract_hex_length, METH_NOARGS,
+static PyObject *concrete_hex_get(PyObject *self)
+{
+	PyObject	*value = NULL, *parent = NULL;
+	int			res;
+	
+	try:
+		// if (!PyArg_ParseTuple(args, "O", &value))
+			// goto except;
+		
+		parent = PyObject_GetAttrString(self, "parent");
+		if (parent == NULL || PyErr_Occurred() != NULL)
+		{
+			PyErr_SetString(PyExc_TypeError, "Hex is not associated with any Stack!");
+			goto except;
+		}
+
+		res = PyObject_RichCompareBool(parent, Py_None, Py_EQ);	// return 1 if true, 0 if false and -1 on error
+		if (res == 1)
+		{
+			PyErr_SetString(PyExc_TypeError, "Hex is not associated with any Stack!");			
+			goto except; 
+		}
+		else if (res == -1)
+			goto except;
+
+		value = PyObject_CallMethod(parent, "get", "O", self);
+		if (value == NULL || PyErr_Occurred() != NULL)
+			goto except;
+		Py_DECREF(parent);
+		goto finally;
+
+	except:
+		Py_XDECREF(value);
+		Py_XDECREF(parent);
+		value = NULL;
+
+	finally:
+		return value;
+}
+
+static PyObject *concrete_hex_set(PyObject *self, PyObject *args)
+{
+	PyObject	*value = NULL, *ret = NULL, *parent = NULL;
+	int			res;
+	
+	try:
+		if (!PyArg_ParseTuple(args, "O", &value))
+			goto except;
+		
+		parent = PyObject_GetAttrString(self, "parent");
+		if (parent == NULL || PyErr_Occurred() != NULL)
+		{
+			PyErr_SetString(PyExc_TypeError, "Hex is not associated with any Stack!");
+			goto except;
+		}
+
+		res = PyObject_RichCompareBool(parent, Py_None, Py_EQ);	// return 1 if true, 0 if false and -1 on error
+		if (res == 1)
+		{
+			PyErr_SetString(PyExc_TypeError, "Hex is not associated with any Stack!");			
+			goto except; 
+		}
+		else if (res == -1)
+			goto except;
+
+		ret = PyObject_CallMethod(parent, "set", "OO", self, value); // None is returned, to save some trouble dont decref and return the same one
+		if (ret == NULL || PyErr_Occurred() != NULL)
+			goto except;
+		Py_DECREF(parent);
+		goto finally;
+
+	except:
+		Py_XDECREF(ret);
+		ret = NULL;
+
+	finally:
+		return ret;
+}
+
+static PyMethodDef concrete_hex_methods[] = {
+	{"length", (PyCFunction)concrete_hex_length, METH_NOARGS,
 	"Distance from 0, 0, 0"
 	},
-	{"distance", (PyCFunction)abstract_hex_distance, METH_O,
+	{"distance", (PyCFunction)concrete_hex_distance, METH_O,
 	"Distance between 2 AbstractHexes"
 	},
-	{"direction", (PyCFunction)abstract_hex_direction, METH_O,
+	{"direction", (PyCFunction)concrete_hex_direction, METH_O,
 	"Returns the coordinates associated with a given direction."
 	},
-	{"neighbor", (PyCFunction)abstract_hex_neighbor, METH_O,
+	{"neighbor", (PyCFunction)concrete_hex_neighbor, METH_O,
 	"Return the neighboring hex in the given direction."
 	},
-	{"around", (PyCFunction)abstract_hex_around, METH_VARARGS | METH_KEYWORDS,
+	{"around", (PyCFunction)concrete_hex_around, METH_VARARGS | METH_KEYWORDS,
 	"Return the ring of hexes, radius distance from this hex."
 	},
-	{"within", (PyCFunction)abstract_hex_within, METH_VARARGS | METH_KEYWORDS,
-	"Return the hexes within radius distance inclusively."
+	{"within", (PyCFunction)concrete_hex_within, METH_VARARGS | METH_KEYWORDS,
+	"Return the hexes within radius distance inclusively.",
+	},
+	{"get", (PyCFunction)concrete_hex_get, METH_VARARGS,
+	"If a parent Stack is assigned return the associated value at this position."
+	},
+	{"set", (PyCFunction)concrete_hex_set, METH_VARARGS,
+	"If a parent Stack is assigned set the value at this position."
 	},
     {NULL}  /* Sentinel */
 };
 
 // Object description
-PyTypeObject AbstractHexType = {
+PyTypeObject HexType = {
 	PyVarObject_HEAD_INIT(NULL, 0)
-	"hexc.AbstractHex",			/* tp_name */
-	sizeof(abstracthex_t),		/* tp_basicsize */
+	"hexc.Hex",					/* tp_name */
+	sizeof(hex_t),				/* tp_basicsize */
 	0,							/* tp_itemsize */
-	(destructor)abstract_hex_dealloc,	/* tp_dealloc */
+	(destructor)concrete_hex_dealloc,	/* tp_dealloc */
 	0,							/* tp_print */
 	0,							/* tp_getattr */
 	0,							/* tp_setattr */
 	0,							/* tp_reserved */
-	abstract_hex_repr,			/* tp_repr */
-	abstract_hex_num_meths,		/* tp_as_number */
+	concrete_hex_repr,			/* tp_repr */
+	concrete_hex_num_meths,		/* tp_as_number */
 	0,							/* tp_as_sequence */
 	0,							/* tp_as_mapping */
 	0,							/* tp_hash	*/
@@ -614,19 +738,19 @@ PyTypeObject AbstractHexType = {
 	"A container for manipulating hexagonal coordinates",/* tp_doc */
 	0,							/* tp_traverse */
 	0,							/* tp_clear */
-	(richcmpfunc)&abstract_hex_compare,	/* tp_richcompare */
+	(richcmpfunc)&concrete_hex_compare,	/* tp_richcompare */
 	0,							/* tp_weaklistoffset */
 	0,							/* tp_iter */
 	0,							/* tp_iternext */
-	abstract_hex_methods,		/* tp_methods	Hex_methods goes here */
-	abstract_hex_members,		/* tp_members */
+	concrete_hex_methods,		/* tp_methods	Hex_methods goes here */
+	concrete_hex_members,		/* tp_members */
 	0,							/* tp_getset */
 	0,							/* tp_base */
 	0,							/* tp_dict */
 	0,							/* tp_descr_get */
 	0,							/* tp_descr_set */
 	0,							/* tp_dictoffset */
-	(initproc)abstract_hex_init,/* tp_init */
+	(initproc)concrete_hex_init,/* tp_init */
 	0,							/* tp_alloc */
-	abstract_hex_new,			/* tp_new */
+	concrete_hex_new,			/* tp_new */
 };

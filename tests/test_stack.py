@@ -15,13 +15,9 @@ def empty_stack():
 
 def test_stack_storage(faux_slice, empty_stack):
     for k, v in faux_slice:
-        print(k, v)
         empty_stack.set(k,v)
-    print('-'*50)
     for k, v in faux_slice:
-        print(k , v)
         got = empty_stack.get(k)
-        print(k, v, got)
         assert got == v
     
 

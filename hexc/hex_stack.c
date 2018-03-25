@@ -45,11 +45,11 @@ static PyObject *stack_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 	return (PyObject *)self;
 }
 
-static int  free_chunk(void *trash, void *value)
-{
-    Py_XDECREF(value);
-    return MAP_OK;
-}
+// static int  free_chunk(void *trash, void *value)
+// {
+//     Py_XDECREF(value);
+//     return MAP_OK;
+// }
 
 static void stack_dealloc(stack_t *self)
 {
@@ -72,14 +72,14 @@ static int stack_init(stack_t *self, PyObject *args, PyObject *kwds)
 }
 
 
-unsigned char *hash_hex(long q, long r, long s)
+unsigned char *hash_hex(long q, long r, long s, long z)
 {
 	unsigned char *ret;
 	char buf[HASH_SIZE];
 	size_t size = HASH_SIZE;
 
 	bzero(buf, HASH_SIZE);
-	snprintf(buf, size, "%0+11li%0+11li%0+11li", q, r, s);
+	snprintf(buf, size, "%0+11li%0+11li%0+11li%0+11li", q, r, s, z);
 	ret = (unsigned char*)malloc(sizeof(char) * HASH_SIZE);
 	bzero(ret, HASH_SIZE);
 	// printf("hash %lu long\n", strlen(buf));
@@ -95,7 +95,7 @@ static PyObject *stack_set(stack_t *self, PyObject *args, PyObject *kwds)
 	PyObject    	*value;
 	int             overwrite = 1;
 	unsigned char	*hash;
-	long			q, r, s;
+	long			q, r, s, z;
 	PyObject		*tmp;
 	PWord_t 		ptr;
 	
@@ -112,7 +112,10 @@ static PyObject *stack_set(stack_t *self, PyObject *args, PyObject *kwds)
 	tmp = PyObject_GetAttrString(coord, "s");
 	s = PyLong_AsLong(tmp);	
 	Py_DECREF(tmp);
-	hash = hash_hex(q, r, s);
+	tmp = PyObject_GetAttrString(coord, "z");
+	z = PyLong_AsLong(tmp);	
+	Py_DECREF(tmp);
+	hash = hash_hex(q, r, s, z);
 	// printf("setting %i, %i, %i to  %p using key %s\n", q, r, s, value, hash);
 	JSLI(ptr, self->chunk, hash);	
 	free(hash);
@@ -130,7 +133,7 @@ static PyObject *stack_get(stack_t *self, PyObject *args)
 	PyObject		*tmp;
 	unsigned char	*hash;
 	int				err;
-	long 			q, r, s;
+	long 			q, r, s, z;
 	// PWord_t			Value;
 
 	if (! PyArg_ParseTuple(args, "O", &coord))
@@ -145,7 +148,10 @@ static PyObject *stack_get(stack_t *self, PyObject *args)
 	tmp = PyObject_GetAttrString(coord, "s");
 	s = PyLong_AsLong(tmp);	
 	Py_DECREF(tmp);
-	hash = hash_hex(q, r, s);
+	tmp = PyObject_GetAttrString(coord, "z");
+	z = PyLong_AsLong(tmp);	
+	Py_DECREF(tmp);
+	hash = hash_hex(q, r, s, z);
 	// printf("getting %i, %i, %i to  %p using key %s\n", q, r, s, value, hash);
 	JSLG(value, self->chunk, hash);
 	free(hash);
