@@ -1,18 +1,23 @@
 language: python
 python:
-  - "3.5"
-  - "3.6"
-  - "3.6-dev"  # 3.6 development branch
-  - "3.7-dev"  # 3.7 development branch
-# add libjudy
+- '3.5'
+- '3.6'
+- 3.6-dev
+- 3.7-dev
 addons:
   apt:
     packages:
-        - libjudy-dev
-# command to install dependencies
+    - libjudy-dev
 install:
-  - pip install -r requirements.txt
-# command to run tests
+- pip install -r requirements.txt
 script:
-  - python setup.py install
-  - py.test # or py.test for Python versions 3.5 and below
+- python setup.py install
+- py.test
+deploy:
+  provider: pypi
+  user: T_Mac
+  password:
+    secure: o/NSg6dhzXDT1vUJw70MBH31WRmOrf1GWMG9OYQsXqxxLlCrrfU5GiQINJ5+U+JPvF0mk5wec8CDfzqfxGb9V4awGxC+LW9xrMI8q3TRnn481Q/r18V1QqQoca4R2pyAKDq5b5iZ4R70blxqboS0R7onAEhjsieSroiWvIsLmBBISRqHRoEJnIEhcbFc5dKxgDc8nCwi4RSVdZ3cjG6nIERKPDxKtAw2ddTbOEzgJudv2zEf/i6eTgcqu8LHKmVK2pB+Q+fBaWqOxJCUB/HgTp7JJ+0qziqBNAmWnZlY+0zw4uGlC2nVnaj+q5y915O4FVeZ0t/isvcOHeE0KxFOMQTGWaFzWheIo/1mVfih+XisemjYvA7NgpVOG7yCukSDQodAwbWvncGVfGMkPpiLlsbyWO4AnNGKf3RBQuQpRQlERMs2soM22BOiimEiNAe7cimSEbChCFVGeEoJpJIg8XRoazLHTJH/TncCVuUPzfzDbV3DqFT2iXqH5FjBazYfMwS25Bq1OWY69+NvgJFBpYnEf4qlqunGggS04+UrlhRG63+y3ZOR8ZXOcAsb+RgHDOtAPFDIXY1VxxZjOP5t2UBgf4XipmxCW8uTyzjcXjMJcJtXvmlWsqER8M/U6WXY6uJsUOtjWSuibMhXedfWOKZRopmTcf+lDtK++QSNUWs=
+  on:
+    tags: true
+    branch: master
