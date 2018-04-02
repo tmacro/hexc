@@ -30,7 +30,7 @@ hexc_ext = Extension(
 
 setup(
 	name="hexc",
-	version="0.1.1",
+	version="0.1.2",
 	url="https://github.com/tmacro/hexc",
 	license='BSD 3-Clause',
 
