@@ -197,6 +197,24 @@ static PyObject *stack_repr(stack_t *obj)
 									obj->radius, obj->height);
 }
 
+static PyObject *stack_compare(PyObject *self, PyObject *other, int op)
+{
+	PyObject *result = NULL;
+
+	try:
+		switch (op) {
+		case Py_EQ:
+			result = PyObject_TypeCheck(other, &StackType) ? Py_True : Py_False;
+			goto finally;
+		}
+	except:
+		result = NULL;
+	
+	finally:
+		Py_XINCREF(result);
+		return result;
+}
+
 static PyMemberDef stack_members[] = {
 	{"radius", T_INT, offsetof(stack_t, radius), 0,
 	 "radius"},
@@ -243,7 +261,7 @@ PyTypeObject StackType = {
 	"3D hexagonal map",			/* tp_doc */
 	0,							/* tp_traverse */
 	0,							/* tp_clear */
-	0,							/* tp_richcompare */
+	(richcmpfunc)&stack_compare,	/* tp_richcompare */
 	0,							/* tp_weaklistoffset */
 	0,							/* tp_iter */
 	0,							/* tp_iternext */

@@ -20,6 +20,11 @@ def test_stack_storage(faux_slice, empty_stack):
         got = empty_stack.get(k)
         assert got == v
     
+def test_stack_compare(empty_stack):
+    # As stack coord offsets are not implemented     
+    # All that is check are the type of the other object
+    assert (not empty_stack == None)
+    assert (empty_stack == empty_stack)
 
 if __name__ == '__main__':
     test_stack_storage(faux_slice(), empty_stack())
