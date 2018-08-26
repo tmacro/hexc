@@ -20,7 +20,7 @@ These are mostly here for the covenience of the programmer.
 ## `Hex`
 
 Slices are composed of nodes named `Hexes`, These are the base units of a hex grid.
-`Hex` subclasses `Abstract Hex` but adds object storage, and a relationship to a greater collection.
+`Hex` subclasses ` Abstract Hex` but adds object storage, and a relationship to a greater collection.
 
 ## `Abstract Hex`
 
